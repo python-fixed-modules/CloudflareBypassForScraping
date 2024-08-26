@@ -7,7 +7,7 @@ from CloudflareBypasser import CloudflareBypasser
 from DrissionPage import ChromiumPage, ChromiumOptions
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
-from typing import Dict
+from typing import Dict, Union, List
 import argparse
 
 # Check if running in Docker mode
@@ -52,6 +52,79 @@ def is_safe_url(url: str) -> bool:
     if (hostname and ip_pattern.match(hostname)) or parsed_url.scheme == "file":
         return False
     return True
+
+# from https://github.com/FlareSolverr/FlareSolverr/blob/master/src/utils.py
+def create_proxy_extension(proxy: dict) -> str:
+    parsed_url = urllib.parse.urlparse(proxy['url'])
+    scheme = parsed_url.scheme
+    host = parsed_url.hostname
+    port = parsed_url.port
+    username = proxy['username']
+    password = proxy['password']
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 2,
+        "name": "Chrome Proxy",
+        "permissions": [
+            "proxy",
+            "tabs",
+            "unlimitedStorage",
+            "storage",
+            "<all_urls>",
+            "webRequest",
+            "webRequestBlocking"
+        ],
+        "background": {"scripts": ["background.js"]},
+        "minimum_chrome_version": "76.0.0"
+    }
+    """
+    background_js = """
+    var config = {
+        mode: "fixed_servers",
+        rules: {
+            singleProxy: {
+                scheme: "%s",
+                host: "%s",
+                port: %d
+            },
+            bypassList: ["localhost"]
+        }
+    };
+
+    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+
+    function callbackFn(details) {
+        return {
+            authCredentials: {
+                username: "%s",
+                password: "%s"
+            }
+        };
+    }
+
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        { urls: ["<all_urls>"] },
+        ['blocking']
+    );
+    """ % (
+        scheme,
+        host,
+        port,
+        username,
+        password
+    )
+
+    proxy_extension_dir = tempfile.mkdtemp()
+
+    with open(os.path.join(proxy_extension_dir, "manifest.json"), "w") as f:
+        f.write(manifest_json)
+
+    with open(os.path.join(proxy_extension_dir, "background.js"), "w") as f:
+        f.write(background_js)
+
+    return proxy_extension_dir
 
 
 # Function to bypass Cloudflare protection
@@ -120,6 +193,27 @@ async def get_html(url: str, retries: int = 5):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class RequestModel(BaseModel):
+    cmd: str
+    url: str
+    maxTimeout: int
+    proxy: Dict[str, str] = None
+
+class ResponseModel(BaseModel):
+    status: str
+    message: str = None
+    solution: Dict[str, Union[str, List[Dict[str, str]]]] = None
+
+@app.post("/v1")
+async def v1(payload: RequestModel):
+    if payload.cmd != "request.get":
+        raise HTTPException(status_code=500, detail="Unsupported cmd")
+    try:
+        driver = bypass_cloudflare(payload.url, 5, log, timeout=payload.maxTimeout, proxy=payload.proxy)
+        html = driver.html
+        cookies_json = driver.cookies(as_dict=True)
+        return ResponseModel(status="ok", solution={"cookies": [{"name": a, "value":b} for a,b in cookies_json.items()], "userAgent": driver.user_agent})    except Exception as e:
+        return ResponseModel(status="failed", message=str(e))
 
 # Main entry point
 if __name__ == "__main__":
