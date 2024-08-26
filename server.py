@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import urllib
 from urllib.parse import urlparse
 
 from CloudflareBypasser import CloudflareBypasser
