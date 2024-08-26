@@ -128,7 +128,7 @@ def create_proxy_extension(proxy: dict) -> str:
 
 
 # Function to bypass Cloudflare protection
-def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
+def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=None) -> ChromiumPage:
     from pyvirtualdisplay import Display
 
     if DOCKER_MODE:
@@ -147,6 +147,15 @@ def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
         options.set_argument("--auto-open-devtools-for-tabs", "true")
         options.set_paths(browser_path=browser_path).headless(False)
 
+    # from https://github.com/FlareSolverr/FlareSolverr/blob/master/src/utils.py
+    if proxy and all(key in proxy for key in ['url', 'username', 'password']):
+        proxy_extension_dir = create_proxy_extension(proxy)
+        options.add_argument("--load-extension=%s" % os.path.abspath(proxy_extension_dir))
+    elif proxy and 'url' in proxy:
+        proxy_url = proxy['url']
+        logging.debug("Using webdriver proxy: %s", proxy_url)
+        options.add_argument('--proxy-server=%s' % proxy_url)
+        
     driver = ChromiumPage(addr_or_opts=options)
     try:
         driver.get(url)
