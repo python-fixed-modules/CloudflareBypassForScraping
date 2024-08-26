@@ -2,8 +2,9 @@ import time
 from DrissionPage import ChromiumPage
 
 class CloudflareBypasser:
-    def __init__(self, driver: ChromiumPage, max_retries=-1, log=True):
+    def __init__(self, driver: ChromiumPage, max_retries=-1, log=True, timeout=60000):
         self.driver = driver
+        self.timeout = time.time() + (timeout / 1000)
         self.max_retries = max_retries
         self.log = log
 
@@ -80,6 +81,8 @@ class CloudflareBypasser:
         try_count = 0
 
         while not self.is_bypassed():
+            if time.time() > self.timeout:
+                raise Exception("timed out")
             if 0 < self.max_retries + 1 <= try_count:
                 self.log_message("Exceeded maximum retries. Bypass failed.")
                 break
