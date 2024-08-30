@@ -68,7 +68,7 @@ Two endpoints are available:
 
 - `/cookies?url=<URL>&retries=<>`: This endpoint returns the cookies of the website (including the Cloudflare cookies).
 - `/html?url=<URL>&retries=<>`: This endpoint returns the HTML content of the website.
-- `/v1?`: (POST) This endpoint returns the cookies of the website but you can send request same with [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) one. and Supports proxy :P
+- `/v1`: (POST) This endpoint returns the cookies of the website but you can send request same with [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) one. and Supports proxy :P
 
 Send a GET request to the desired endpoint with the URL of the website you want to bypass the Cloudflare protection.
 
