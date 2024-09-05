@@ -199,7 +199,7 @@ class RequestModel(BaseModel):
 class ResponseModel(BaseModel):
     status: str
     message: str = None
-    solution: Dict[str, Union[str, List[Dict[str, str]]]] = None
+    solution: Dict[str, Union[str, List[Dict[str, str]], Dict[str, str]]] = None
 
 @app.post("/v1")
 async def v1(payload: RequestModel):
