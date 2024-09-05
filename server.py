@@ -12,9 +12,6 @@ from pydantic import BaseModel
 from typing import Dict, Union, List
 import argparse
 
-# Check if running in Docker mode
-DOCKER_MODE = os.getenv("DOCKERMODE", "false").lower() == "true"
-
 # Chromium options arguments
 arguments = [
     # "--remote-debugging-port=9222",  # Add this line for remote debugging
@@ -131,26 +128,13 @@ def create_proxy_extension(proxy: dict) -> str:
 
 # Function to bypass Cloudflare protection
 def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=None) -> ChromiumPage:
-    from pyvirtualdisplay import Display
-
-    if DOCKER_MODE:
-        # Start Xvfb for Docker
-        display = Display(visible=0, size=(1920, 1080))
-        display.start()
-
-        options = ChromiumOptions()
-        options.set_argument("--auto-open-devtools-for-tabs", "true")
-        options.set_argument("--remote-debugging-port=9222")
-        options.set_argument("--no-sandbox")  # Necessary for Docker
-        options.set_argument("--disable-gpu")  # Optional, helps in some cases
-        options.set_paths(browser_path=browser_path).headless(False)
-    else:
-        options = ChromiumOptions()
-        options.set_argument("--auto-open-devtools-for-tabs", "true")
-        options.set_argument("--remote-debugging-port=9222")
-        options.set_argument("--no-sandbox")  # Necessary for Docker
-        options.set_argument("--disable-gpu")  # Optional, helps in some cases
-        options.set_paths(browser_path=browser_path).headless(False)
+    options = ChromiumOptions()
+    options.set_argument("--auto-open-devtools-for-tabs", "true")
+    #options.set_argument("--remote-debugging-port=9222")
+    options.set_argument("--no-sandbox")  # Necessary for Docker
+    options.set_argument("--disable-gpu")  # Optional, helps in some cases
+    options.set_paths(browser_path=browser_path).headless(False)
+    options.auto_port()
 
     # from https://github.com/FlareSolverr/FlareSolverr/blob/master/src/utils.py
     if proxy and all(key in proxy for key in ['url', 'username', 'password']):
@@ -169,8 +153,6 @@ def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=No
         return driver
     except Exception as e:
         driver.quit()
-        if DOCKER_MODE:
-            display.stop()  # Stop Xvfb
         raise e
 
 
@@ -223,7 +205,7 @@ async def v1(payload: RequestModel):
     if payload.cmd != "request.get":
         raise HTTPException(status_code=500, detail="Unsupported cmd")
     try:
-        print(payload.proxy)
+        #print(payload.proxy)
         driver = bypass_cloudflare(payload.url, 5, log, timeout=payload.maxTimeout, proxy=payload.proxy)
         html = driver.html
         cookies_json = driver.cookies(as_dict=True)
@@ -239,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument("--headless", action="store_true", help="Run in headless mode")
 
     args = parser.parse_args()
-    if args.headless and not DOCKER_MODE:
+    if args.headless:
         from pyvirtualdisplay import Display
 
         display = Display(visible=0, size=(1920, 1080))
