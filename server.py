@@ -139,7 +139,8 @@ def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=No
     # from https://github.com/FlareSolverr/FlareSolverr/blob/master/src/utils.py
     if proxy and all(key in proxy for key in ['url', 'username', 'password']):
         proxy_extension_dir = create_proxy_extension(proxy)
-        options.set_argument("--load-extension", os.path.abspath(proxy_extension_dir))
+        #options.set_argument("--load-extension", os.path.abspath(proxy_extension_dir))
+        options.add_extension(os.path.abspath(proxy_extension_dir))
     elif proxy and 'url' in proxy:
         proxy_url = proxy['url']
         # logging.debug("Using webdriver proxy: %s", proxy_url)
