@@ -210,11 +210,12 @@ async def v1(payload: RequestModel):
         driver = bypass_cloudflare(payload.url, 5, log, timeout=payload.maxTimeout, proxy=payload.proxy)
         html = driver.html
         cookies_json = driver.cookies(as_dict=True)
+        user_agent = str(driver.user_agent)
         try:
             driver.quit()
         except:
             pass
-        return ResponseModel(status="ok", solution={"cookies": [{"name": a, "value":b} for a,b in cookies_json.items()], "kv_cookies": {a:b for a,b in cookies_json.items()}, "userAgent": driver.user_agent, "html": html})
+        return ResponseModel(status="ok", solution={"cookies": [{"name": a, "value":b} for a,b in cookies_json.items()], "kv_cookies": {a:b for a,b in cookies_json.items()}, "userAgent": user_agent, "html": html})
     except Exception as e:
         return ResponseModel(status="failed", message=str(e))
 
