@@ -6,7 +6,7 @@ import tempfile
 import traceback
 from urllib.parse import urlparse
 
-from CloudflareBypasser import CloudflareBypasser
+from TurnstileBypasser import CloudflareBypasser
 from DrissionPage import ChromiumPage, ChromiumOptions
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
