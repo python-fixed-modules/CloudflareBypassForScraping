@@ -32,7 +32,7 @@ window.onloadTurnstileCallback = function () {
   turnstile.render('#result', {
     sitekey: "<self.sitekey>",
     theme: 'dark',
-    size: 'normal',
+    size: '<self.type>',
     callback: function(token) {
       const input = document.createElement('input');
       input.type = 'hidden';
@@ -129,7 +129,7 @@ def clean(driver):
         pass
 
 # Function to bypass Cloudflare protection
-def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000, proxy=None) -> ChromiumPage:
+def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000, proxy=None, invisible=False) -> ChromiumPage:
     options = ChromiumOptions()
     options.set_argument("--auto-open-devtools-for-tabs", "true")
     #options.set_argument("--remote-debugging-port=9222")
@@ -155,7 +155,7 @@ def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000,
     try:
         #driver.get(url+ "/aubworubarwboab2urgu9fgobnjsfbjbasoigup") # random string to speed up load
         driver.get(url)
-        driver.run_js(javascript_code.replace("<self.sitekey>", sitekey))
+        driver.run_js(javascript_code.replace("<self.sitekey>", sitekey).replace("<self.type>", "invisible" if invisible else "normal"))
         #print("javascript is gone")
         cf_bypasser = CloudflareBypasser(driver, retries, log, timeout)
         result = cf_bypasser.bypass()
@@ -178,7 +178,7 @@ class ResponseModel(BaseModel):
 @app.post("/solve")
 def solve(payload: RequestModel):
     try:
-        result = bypass_cloudflare(payload.url, 15, log, payload.sitekey, proxy=payload.proxy)
+        result = bypass_cloudflare(payload.url, 15, log, payload.sitekey, proxy=payload.proxy, invisible=payload.invisible)
         return ResponseModel(status="success", token=result)
     except Exception as e:
         traceback.print_exc()
