@@ -125,6 +125,15 @@ def create_proxy_extension(proxy: dict) -> str:
 
     return proxy_extension_dir
 
+def clean(driver):
+    try:
+        driver.close()
+    except:
+        pass
+    try:
+        driver.quit()
+    except:
+        pass
 
 # Function to bypass Cloudflare protection
 def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=None) -> ChromiumPage:
@@ -151,22 +160,23 @@ def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=No
         driver.get(url)
         cf_bypasser = CloudflareBypasser(driver, retries, log, timeout)
         cf_bypasser.bypass()
+        clean(driver)
         return driver
     except Exception as e:
-        driver.quit()
+        clean(driver)
         raise e
 
 
 # Endpoint to get cookies
 @app.get("/cookies", response_model=CookieResponse)
-async def get_cookies(url: str, retries: int = 5):
+def get_cookies(url: str, retries: int = 5):
     if not is_safe_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
         driver = bypass_cloudflare(url, retries, log)
         cookies = driver.cookies(as_dict=True)
         user_agent = driver.user_agent
-        driver.quit()
+        clean(driver)
         return CookieResponse(cookies=cookies, user_agent=user_agent)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -174,7 +184,7 @@ async def get_cookies(url: str, retries: int = 5):
 
 # Endpoint to get HTML content and cookies
 @app.get("/html")
-async def get_html(url: str, retries: int = 5):
+def get_html(url: str, retries: int = 5):
     if not is_safe_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
@@ -185,7 +195,7 @@ async def get_html(url: str, retries: int = 5):
         response = Response(content=html, media_type="text/html")
         response.headers["cookies"] = cookies_json
         response.headers["user_agent"] = driver.user_agent
-        driver.quit()
+        clean(driver)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -202,7 +212,7 @@ class ResponseModel(BaseModel):
     solution: Dict[str, Union[str, List[Dict[str, str]], Dict[str, str]]] = None
 
 @app.post("/v1")
-async def v1(payload: RequestModel):
+def v1(payload: RequestModel):
     if payload.cmd != "request.get":
         raise HTTPException(status_code=500, detail="Unsupported cmd")
     try:
@@ -211,10 +221,6 @@ async def v1(payload: RequestModel):
         html = driver.html
         cookies_json = driver.cookies(as_dict=True)
         user_agent = str(driver.user_agent)
-        try:
-            driver.quit()
-        except:
-            pass
         return ResponseModel(status="ok", solution={"cookies": [{"name": a, "value":b} for a,b in cookies_json.items()], "kv_cookies": {a:b for a,b in cookies_json.items()}, "userAgent": user_agent, "html": html})
     except Exception as e:
         return ResponseModel(status="failed", message=str(e))
@@ -236,6 +242,6 @@ if __name__ == "__main__":
         log = False
     else:
         log = True
-    import uvicorn
 
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
