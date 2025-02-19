@@ -118,6 +118,16 @@ def create_proxy_extension(proxy: dict) -> str:
 
     return proxy_extension_dir
 
+def clean(driver):
+    try:
+        driver.close()
+    except:
+        pass
+    try:
+        driver.quit()
+    except:
+        pass
+
 # Function to bypass Cloudflare protection
 def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000, proxy=None) -> ChromiumPage:
     options = ChromiumOptions()
@@ -143,21 +153,22 @@ def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000,
         
     driver = ChromiumPage(addr_or_opts=options)
     try:
-        driver.get(url+ "/aubworubarwboab2urgu9fgobnjsfbjbasoigup") # random string to speed up load
+        #driver.get(url+ "/aubworubarwboab2urgu9fgobnjsfbjbasoigup") # random string to speed up load
+        driver.get(url)
         driver.run_js(javascript_code.replace("<self.sitekey>", sitekey))
-        print("javascript is gone")
+        #print("javascript is gone")
         cf_bypasser = CloudflareBypasser(driver, retries, log, timeout)
         result = cf_bypasser.bypass()
-        driver.quit()
+        clean(driver)
         return result
     except Exception as e:
-        driver.quit()
+        clean(driver)
         raise e
 
 class RequestModel(BaseModel):
     sitekey: str
     url: str
-    invisible: bool
+    invisible: bool = False
     proxy: str = None
 
 class ResponseModel(BaseModel):
@@ -165,7 +176,7 @@ class ResponseModel(BaseModel):
     token: Union[str, None]
 
 @app.post("/solve")
-async def solve(payload: RequestModel):
+def solve(payload: RequestModel):
     try:
         result = bypass_cloudflare(payload.url, 15, log, payload.sitekey, proxy=payload.proxy)
         return ResponseModel(status="success", token=result)
@@ -190,6 +201,6 @@ if __name__ == "__main__":
         log = False
     else:
         log = True
-    import uvicorn
 
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5000)
