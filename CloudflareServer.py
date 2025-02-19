@@ -160,7 +160,6 @@ def bypass_cloudflare(url: str, retries: int, log: bool, timeout=60000, proxy=No
         driver.get(url)
         cf_bypasser = CloudflareBypasser(driver, retries, log, timeout)
         cf_bypasser.bypass()
-        clean(driver)
         return driver
     except Exception as e:
         clean(driver)
@@ -191,7 +190,6 @@ def get_html(url: str, retries: int = 5):
         driver = bypass_cloudflare(url, retries, log)
         html = driver.html
         cookies_json = json.dumps(driver.cookies(as_dict=True))
-
         response = Response(content=html, media_type="text/html")
         response.headers["cookies"] = cookies_json
         response.headers["user_agent"] = driver.user_agent
@@ -221,6 +219,7 @@ def v1(payload: RequestModel):
         html = driver.html
         cookies_json = driver.cookies(as_dict=True)
         user_agent = str(driver.user_agent)
+        clean(driver)
         return ResponseModel(status="ok", solution={"cookies": [{"name": a, "value":b} for a,b in cookies_json.items()], "kv_cookies": {a:b for a,b in cookies_json.items()}, "userAgent": user_agent, "html": html})
     except Exception as e:
         return ResponseModel(status="failed", message=str(e))
