@@ -159,7 +159,6 @@ def bypass_cloudflare(url: str, retries: int, log: bool, sitekey, timeout=60000,
         #print("javascript is gone")
         cf_bypasser = CloudflareBypasser(driver, retries, log, timeout)
         result = cf_bypasser.bypass()
-        clean(driver)
         return result
     except Exception as e:
         clean(driver)
@@ -179,6 +178,7 @@ class ResponseModel(BaseModel):
 def solve(payload: RequestModel):
     try:
         result = bypass_cloudflare(payload.url, 15, log, payload.sitekey, proxy=payload.proxy, invisible=payload.invisible)
+        clean(driver)
         return ResponseModel(status="success", token=result)
     except Exception as e:
         traceback.print_exc()
